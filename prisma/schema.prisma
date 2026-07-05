@@ -1,0 +1,150 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  phone     String?
+  role      UserRole   @default(USER)
+  avatar    String?
+  bio       String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  properties  Property[]
+  favorites   Favorite[]
+  inquiries   Inquiry[]
+  profileUpdates ProfileUpdate[]
+
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  GUEST
+  USER
+  AGENT
+  ADMIN
+}
+
+model Property {
+  id              String     @id @default(cuid())
+  title           String
+  description     String?
+  price           Float
+  pricePerMonth   Float?
+  location        String
+  city            String
+  state           String
+  zipCode         String?
+  country         String
+  latitude        Float?
+  longitude       Float?
+  propertyType    PropertyType
+  bedrooms        Int
+  bathrooms       Int
+  area            Float      // in square meters
+  amenities       String[]   // JSON array for flexibility
+  featured        Boolean    @default(false)
+  status          PropertyStatus @default(AVAILABLE)
+  agentId         String
+  agent           User       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  images    PropertyImage[]
+  favorites Favorite[]
+  inquiries Inquiry[]
+
+  @@index([agentId])
+  @@index([city])
+  @@index([propertyType])
+  @@index([status])
+  @@index([price])
+  @@index([createdAt])
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  COMMERCIAL
+  LAND
+  TOWNHOUSE
+  STUDIO
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  SOLD
+  RENTED
+  PENDING
+}
+
+model PropertyImage {
+  id        String     @id @default(cuid())
+  url       String
+  publicId  String?    // For Supabase Storage reference
+  order     Int        @default(0)
+  isFeatured Boolean   @default(false)
+  propertyId String
+  property  Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@index([propertyId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property  Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+  @@index([propertyId])
+}
+
+model Inquiry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property  Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  message   String
+  status    InquiryStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([propertyId])
+  @@index([status])
+}
+
+enum InquiryStatus {
+  PENDING
+  REPLIED
+  CLOSED
+}
+
+model ProfileUpdate {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  changes   Json     // Store the changes made
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
